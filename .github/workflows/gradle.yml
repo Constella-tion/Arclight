@@ -1,43 +1,38 @@
-# This workflow will build a Java project with Gradle
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
-
-name: Build
-
+name: Build spawnfix Fabric
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
   push:
     branches:
-      - '**'
-
+      - build/a0905ad-spawnfix-fabric
+permissions:
+  contents: read
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    timeout-minutes: 45
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
-    - name: Set up JDK 25
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '25'
-    - name: Cache Gradle User Files
-      uses: actions/cache@v4
-      with:
-        path: ~/.gradle
-        key: ${{ runner.os }}-gradle-user-home-v2-${{ hashFiles('**/*.gradle', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'buildSrc/src/**', 'arclight-common/bukkit.at', 'arclight-common/extra_mapping.tsrg', 'gradle.properties') }}
-    - name: Cache Gradle Files
-      uses: actions/cache@v4
-      with:
-        path: ./.gradle
-        key: ${{ runner.os }}-gradle-file-v2-${{ hashFiles('**/*.gradle', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'buildSrc/src/**', 'arclight-common/bukkit.at', 'arclight-common/extra_mapping.tsrg', 'gradle.properties') }}
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build
-      env:
-        ARCLIGHT_FILES_TOKEN: ${{ secrets.ARCLIGHT_FILES_TOKEN }}
-      run: |
-        ./gradlew cleanBuild build collect uploadFiles --no-daemon --stacktrace
-
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+      - name: Build Fabric core
+        run: |
+          chmod +x gradlew
+          ./gradlew :bootstrap:fabricJar --no-daemon --stacktrace --console=plain
+      - name: Record source and hashes
+        run: |
+          git rev-parse HEAD > bootstrap/build/libs/SOURCE_COMMIT.txt
+          sha256sum bootstrap/build/libs/arclight-fabric-*.jar > bootstrap/build/libs/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arclight-a0905ad-spawnfix-fabric
+          path: |
+            bootstrap/build/libs/arclight-fabric-*.jar
+            bootstrap/build/libs/SOURCE_COMMIT.txt
+            bootstrap/build/libs/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
